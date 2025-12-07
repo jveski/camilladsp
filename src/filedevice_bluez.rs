@@ -6,6 +6,8 @@ use zbus::blocking::Connection;
 use zbus::zvariant::OwnedFd;
 use zbus::Message;
 
+use crate::filedevice::Reader;
+use crate::filereader_buffered::BufferedReader;
 use crate::filereader_nonblock::NonBlockingReader;
 
 pub struct WrappedBluezFd {
@@ -37,18 +39,20 @@ impl AsRawFd for WrappedBluezFd {
     }
 }
 
-pub fn open_bluez_dbus_fd<'a>(
+pub fn open_bluez_dbus_fd(
     service: String,
     path: String,
     chunksize: usize,
     samplerate: usize,
-) -> Result<Box<NonBlockingReader<'a, WrappedBluezFd>>, zbus::Error> {
+    buffer_bytes: usize,
+) -> Result<Box<dyn Reader>, zbus::Error> {
     let conn1 = Connection::system()?;
     let res = conn1.call_method(Some(service), path, Some("org.bluealsa.PCM1"), "Open", &())?;
 
-    let reader = Box::new(NonBlockingReader::new(
-        WrappedBluezFd::new_from_open_message(res),
-        2 * 1000 * chunksize as u64 / samplerate as u64,
-    ));
-    Ok(reader)
+    let timeout_millis = 2 * 1000 * chunksize as u64 / samplerate as u64;
+    let nonblock_reader =
+        NonBlockingReader::new(WrappedBluezFd::new_from_open_message(res), timeout_millis);
+
+    let buffered_reader = BufferedReader::new(nonblock_reader, buffer_bytes);
+    Ok(Box::new(buffered_reader))
 }

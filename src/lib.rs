@@ -126,6 +126,7 @@ pub mod filedevice;
 pub mod filedevice_bluez;
 #[cfg(not(target_os = "linux"))]
 pub mod filereader;
+pub mod filereader_buffered;
 #[cfg(target_os = "linux")]
 pub mod filereader_nonblock;
 pub mod filters;

@@ -386,6 +386,8 @@ pub struct CaptureDeviceBluez {
     pub format: SampleFormat,
     pub channels: usize,
     #[serde(default)]
+    pub buffer_size: Option<usize>,
+    #[serde(default)]
     pub labels: Option<Vec<Option<String>>>,
 }
 
@@ -393,6 +395,12 @@ pub struct CaptureDeviceBluez {
 impl CaptureDeviceBluez {
     pub fn service(&self) -> String {
         self.service.clone().unwrap_or("org.bluealsa".to_string())
+    }
+
+    pub fn buffer_size(&self, chunksize: usize, bytes_per_frame: usize) -> usize {
+        self.buffer_size
+            .map(|frames| frames * bytes_per_frame)
+            .unwrap_or(3 * chunksize * bytes_per_frame)
     }
 }
 

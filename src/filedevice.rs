@@ -47,7 +47,11 @@ pub enum CaptureSource {
     Filename(String),
     Stdin,
     #[cfg(all(target_os = "linux", feature = "bluez-backend"))]
-    BluezDBus(String, String),
+    BluezDBus {
+        service: String,
+        path: String,
+        buffer_bytes: usize,
+    },
 }
 
 #[derive(Clone)]
@@ -639,10 +643,20 @@ impl CaptureDevice for FileCaptureDevice {
                         2 * 1000 * chunksize as u64 / samplerate as u64,
                     ))),
                     #[cfg(all(target_os = "linux", feature = "bluez-backend"))]
-                    CaptureSource::BluezDBus(service, path) => {
-                        filedevice_bluez::open_bluez_dbus_fd(service, path, chunksize, samplerate)
-                            .map(|r| r as Box<dyn Reader>)
-                            .map_err(|e| e.into())
+                    CaptureSource::BluezDBus {
+                        service,
+                        path,
+                        buffer_bytes,
+                    } => {
+                        filedevice_bluez::open_bluez_dbus_fd(
+                            service,
+                            path,
+                            chunksize,
+                            samplerate,
+                            buffer_bytes,
+                        )
+                        .map(|r| r as Box<dyn Reader>)
+                        .map_err(|e| e.into())
                     }
                 };
                 match file_res {

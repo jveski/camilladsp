@@ -649,22 +649,30 @@ pub fn new_capture_device(conf: config::Devices) -> Box<dyn CaptureDevice> {
             chunksize: conf.chunksize,
         }),
         #[cfg(all(target_os = "linux", feature = "bluez-backend"))]
-        config::CaptureDevice::Bluez(ref dev) => Box::new(filedevice::FileCaptureDevice {
-            source: filedevice::CaptureSource::BluezDBus(dev.service(), dev.dbus_path.clone()),
-            samplerate: conf.samplerate,
-            capture_samplerate,
-            resampler_config: conf.resampler,
-            chunksize: conf.chunksize,
-            channels: dev.channels,
-            sample_format: Some(dev.format),
-            extra_samples: 0,
-            silence_threshold: conf.silence_threshold(),
-            silence_timeout: conf.silence_timeout(),
-            skip_bytes: 0,
-            read_bytes: 0,
-            stop_on_rate_change: conf.stop_on_rate_change(),
-            rate_measure_interval: conf.rate_measure_interval(),
-        }),
+        config::CaptureDevice::Bluez(ref dev) => {
+            let bytes_per_frame = dev.channels * dev.format.bytes_per_sample();
+            let buffer_bytes = dev.buffer_size(conf.chunksize, bytes_per_frame);
+            Box::new(filedevice::FileCaptureDevice {
+                source: filedevice::CaptureSource::BluezDBus {
+                    service: dev.service(),
+                    path: dev.dbus_path.clone(),
+                    buffer_bytes,
+                },
+                samplerate: conf.samplerate,
+                capture_samplerate,
+                resampler_config: conf.resampler,
+                chunksize: conf.chunksize,
+                channels: dev.channels,
+                sample_format: Some(dev.format),
+                extra_samples: 0,
+                silence_threshold: conf.silence_threshold(),
+                silence_timeout: conf.silence_timeout(),
+                skip_bytes: 0,
+                read_bytes: 0,
+                stop_on_rate_change: conf.stop_on_rate_change(),
+                rate_measure_interval: conf.rate_measure_interval(),
+            })
+        }
         #[cfg(target_os = "macos")]
         config::CaptureDevice::CoreAudio(ref dev) => {
             Box::new(coreaudiodevice::CoreaudioCaptureDevice {
