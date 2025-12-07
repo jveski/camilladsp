@@ -127,7 +127,7 @@ impl<R: Reader> Reader for BufferedReader<R> {
             if saw_eof {
                 return Ok(ReadResult::EndOfFile(total_bytes_read));
             }
-            if saw_timeout && newly_drained == 0 {
+            if saw_timeout {
                 return Ok(ReadResult::Timeout(total_bytes_read));
             }
         }
